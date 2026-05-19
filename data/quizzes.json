@@ -1,0 +1,87 @@
+{
+  "science": {
+    "title": "Science basics",
+    "questions": [
+      {
+        "q": "What is the chemical symbol for water?",
+        "choices": ["HO₂", "H₂O", "O₂H", "H₂O₂"],
+        "correct": 1
+      },
+      {
+        "q": "At sea level, water boils at about:",
+        "choices": ["90 °C", "100 °C", "212 °F only", "0 °C"],
+        "correct": 1
+      },
+      {
+        "q": "Photosynthesis mainly produces:",
+        "choices": ["Carbon dioxide", "Oxygen", "Nitrogen", "Methane"],
+        "correct": 1
+      },
+      {
+        "q": "The center of an atom is called the:",
+        "choices": ["Electron shell", "Nucleus", "Isotope", "Ion"],
+        "correct": 1
+      }
+    ]
+  },
+  "geography": {
+    "title": "World geography",
+    "questions": [
+      {
+        "q": "Which is the largest ocean by surface area?",
+        "choices": ["Atlantic", "Indian", "Arctic", "Pacific"],
+        "correct": 3
+      },
+      {
+        "q": "The Amazon River flows mainly through:",
+        "choices": ["Africa", "Brazil", "Australia", "Canada"],
+        "correct": 1
+      },
+      {
+        "q": "Mount Everest lies on the border of Nepal and:",
+        "choices": ["India", "China", "Bhutan", "Pakistan"],
+        "correct": 1
+      },
+      {
+        "q": "The capital of Japan is:",
+        "choices": ["Seoul", "Beijing", "Tokyo", "Bangkok"],
+        "correct": 2
+      }
+    ]
+  },
+  "web": {
+    "title": "Web & HTML",
+    "questions": [
+      {
+        "q": "What does HTML stand for?",
+        "choices": [
+          "HyperText Markup Language",
+          "High Transfer Markup Language",
+          "Hyperlink Text Mode Language",
+          "Home Tool Markup Language"
+        ],
+        "correct": 0
+      },
+      {
+        "q": "Which HTTP status code means \"Not Found\"?",
+        "choices": ["200", "301", "404", "500"],
+        "correct": 2
+      },
+      {
+        "q": "CSS is mainly used to:",
+        "choices": [
+          "Store data on the server",
+          "Style and layout pages",
+          "Run database queries",
+          "Compile TypeScript"
+        ],
+        "correct": 1
+      },
+      {
+        "q": "The <title> element appears in:",
+        "choices": ["Only the body", "The browser tab / bookmark", "Console only", "CSS files"],
+        "correct": 1
+      }
+    ]
+  }
+}

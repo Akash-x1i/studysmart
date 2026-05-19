@@ -1,0 +1,16 @@
+{
+  "name": "studysmart-quiz-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "REST API for StudySmart quizzes (ESP32 / embedded clients)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

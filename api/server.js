@@ -6,8 +6,8 @@
  * Env:
  * - PORT (default 3333)
  * - QUIZ_DATA (path to quizzes.json)
- * - GEMINI_API_KEY (required for generated ask/quiz routes)
- * - GEMINI_MODEL (default gemini-2.5-flash)
+ * - NVIDIA_API_KEY (required for generated ask/quiz routes)
+ * - NVIDIA_MODEL (default deepseek-ai/deepseek-v4-pro)
  */
 
 const fs = require("fs");
@@ -16,10 +16,9 @@ const crypto = require("crypto");
 const express = require("express");
 
 const PORT = Number(process.env.PORT) || 3333;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-const GEMINI_BASE_URL =
-  process.env.GEMINI_BASE_URL || "https://generativelanguage.googleapis.com/v1beta";
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || "";
+const NVIDIA_MODEL = process.env.NVIDIA_MODEL || "deepseek-ai/deepseek-v4-pro";
+const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1";
 const DATA_PATH =
   process.env.QUIZ_DATA ||
   path.join(__dirname, "..", "data", "quizzes.json");
@@ -59,7 +58,7 @@ app.use((req, res, next) => {
 
 app.get("/api/health", (req, res) => {
   res.type("application/json");
-  res.json({ ok: true, v: 2, gemini: Boolean(GEMINI_API_KEY) });
+  res.json({ ok: true, v: 3, provider: "nvidia", ai: Boolean(NVIDIA_API_KEY) });
 });
 
 function now() {
@@ -139,51 +138,49 @@ function parseJsonFromText(text) {
     return JSON.parse(trimmed);
   } catch (_) {
     const match = trimmed.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if (!match) throw new Error("Gemini did not return JSON");
+    if (!match) throw new Error("AI provider did not return JSON");
     return JSON.parse(match[0]);
   }
 }
 
-function requireGemini(res) {
-  if (GEMINI_API_KEY) return true;
-  res.status(503).json({ error: "gemini_not_configured", need: "GEMINI_API_KEY" });
+function requireAiProvider(res) {
+  if (NVIDIA_API_KEY) return true;
+  res.status(503).json({ error: "nvidia_not_configured", need: "NVIDIA_API_KEY" });
   return false;
 }
 
-async function callGemini(systemText, userText, responseMimeType) {
-  const url = `${GEMINI_BASE_URL}/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`;
+async function callAi(systemText, userText, options = {}) {
+  const url = `${NVIDIA_BASE_URL}/chat/completions`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-goog-api-key": GEMINI_API_KEY,
+      Authorization: `Bearer ${NVIDIA_API_KEY}`,
     },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemText }] },
-      contents: [{ role: "user", parts: [{ text: userText }] }],
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType,
-      },
+      model: NVIDIA_MODEL,
+      messages: [
+        { role: "system", content: systemText },
+        { role: "user", content: userText },
+      ],
+      temperature: options.temperature || 0.4,
+      top_p: options.topP || 0.95,
+      max_tokens: options.maxTokens || 2048,
+      stream: false,
+      chat_template_kwargs: { thinking: false },
     }),
   });
 
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = body && body.error && body.error.message;
-    throw new Error(message || `Gemini request failed with ${response.status}`);
+    throw new Error(message || `AI request failed with ${response.status}`);
   }
 
-  const text =
-    body &&
-    body.candidates &&
-    body.candidates[0] &&
-    body.candidates[0].content &&
-    body.candidates[0].content.parts &&
-    body.candidates[0].content.parts.map((part) => part.text || "").join("").trim();
+  const text = body && body.choices && body.choices[0] && body.choices[0].message && body.choices[0].message.content;
 
-  if (!text) throw new Error("Gemini returned an empty response");
-  return text;
+  if (!text) throw new Error("AI provider returned an empty response");
+  return String(text).trim();
 }
 
 function answerPayload(answerId, pages, pageIndex) {
@@ -222,7 +219,7 @@ function questionPayload(quizId, session, index) {
 }
 
 app.post("/api/ask", async (req, res) => {
-  if (!requireGemini(res)) return;
+  if (!requireAiProvider(res)) return;
   const question = cleanText(req.body && req.body.question, LIMITS.askQuestion);
   const deviceId = cleanText(req.body && req.body.deviceId, 40);
   if (!question || !deviceId) {
@@ -237,13 +234,13 @@ app.post("/api/ask", async (req, res) => {
       "Write short sentences. Max 15 words per sentence.",
       "Answer clearly for a student.",
     ].join(" ");
-    const fullAnswer = await callGemini(systemText, question, "text/plain");
+    const fullAnswer = await callAi(systemText, question, { maxTokens: 1024 });
     const pages = splitIntoPages(fullAnswer);
     const answerId = makeId("ans");
     askSessions.set(answerId, { deviceId, pages, expiresAt: now() + ASK_TTL_MS });
     res.json(answerPayload(answerId, pages, 0));
   } catch (e) {
-    res.status(502).json({ error: "gemini_failed", message: cleanText(e.message, 160) });
+    res.status(502).json({ error: "ai_failed", message: cleanText(e.message, 160) });
   }
 });
 
@@ -263,7 +260,7 @@ app.get("/api/ask/:answerId/page/:pageNum", (req, res) => {
 });
 
 app.post("/api/quiz/generate", async (req, res) => {
-  if (!requireGemini(res)) return;
+  if (!requireAiProvider(res)) return;
   const topic = cleanText(req.body && req.body.topic, LIMITS.quizTopic);
   const deviceId = cleanText(req.body && req.body.deviceId, 40);
   const requestedCount = Number(req.body && req.body.count);
@@ -280,13 +277,16 @@ app.post("/api/quiz/generate", async (req, res) => {
       "Question text max 100 characters.",
       "Each option max 35 characters.",
       "Explanation max 100 characters, one sentence only.",
+      "Return only valid JSON. Do not wrap it in markdown.",
       "Return JSON with this shape: {\"questions\":[{\"text\":\"\",\"options\":[\"\",\"\",\"\",\"\"],\"correctIndex\":0,\"explanation\":\"\"}]}",
     ].join(" ");
-    const text = await callGemini(systemText, `Generate ${count} quiz questions about ${topic}.`, "application/json");
+    const text = await callAi(systemText, `Generate ${count} quiz questions about ${topic}.`, {
+      maxTokens: 4096,
+    });
     const parsed = parseJsonFromText(text);
     const rawQuestions = Array.isArray(parsed.questions) ? parsed.questions : [];
     const questions = rawQuestions.slice(0, count).map(normalizeQuestion);
-    if (!questions.length) throw new Error("Gemini returned no questions");
+    if (!questions.length) throw new Error("AI provider returned no questions");
 
     const quizId = makeId("qz");
     const session = { deviceId, topic, questions, expiresAt: now() + QUIZ_TTL_MS };
@@ -298,7 +298,7 @@ app.post("/api/quiz/generate", async (req, res) => {
       question: questions[0],
     });
   } catch (e) {
-    res.status(502).json({ error: "gemini_failed", message: cleanText(e.message, 160) });
+    res.status(502).json({ error: "ai_failed", message: cleanText(e.message, 160) });
   }
 });
 

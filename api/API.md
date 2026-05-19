@@ -11,7 +11,7 @@ For ESP32, use your computer LAN IP instead of `127.0.0.1`.
 Start server:
 
 ```bash
-GEMINI_API_KEY="your_key" npm start
+NVIDIA_API_KEY="your_key" npm start
 ```
 
 ## Render Deploy
@@ -23,7 +23,7 @@ Deploy steps:
 1. Push the repo to GitHub.
 2. In Render, choose New > Blueprint.
 3. Select this repo.
-4. Add environment variable `GEMINI_API_KEY`.
+4. Add environment variable `NVIDIA_API_KEY`.
 5. Deploy.
 
 Render will run:
@@ -63,7 +63,7 @@ GET /api/health
 Response:
 
 ```json
-{ "ok": true, "v": 2, "gemini": true }
+{ "ok": true, "v": 3, "provider": "nvidia", "ai": true }
 ```
 
 ## Ask
@@ -185,4 +185,4 @@ GET /api/question/:topicId/:index
 POST /api/verify
 ```
 
-These use `data/quizzes.json` and do not require Gemini.
+These use `data/quizzes.json` and do not require NVIDIA or DeepSeek.

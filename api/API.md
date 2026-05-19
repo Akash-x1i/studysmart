@@ -14,6 +14,46 @@ Start server:
 GEMINI_API_KEY="your_key" npm start
 ```
 
+## Render Deploy
+
+This repo includes `render.yaml` for Render.
+
+Deploy steps:
+
+1. Push the repo to GitHub.
+2. In Render, choose New > Blueprint.
+3. Select this repo.
+4. Add environment variable `GEMINI_API_KEY`.
+5. Deploy.
+
+Render will run:
+
+```bash
+cd api && npm install
+cd api && npm start
+```
+
+After deploy, your base URL will look like:
+
+```text
+https://studysmart-api.onrender.com
+```
+
+Check it:
+
+```bash
+curl https://studysmart-api.onrender.com/api/health
+```
+
+For ESP32, set `API_HOST` to the Render hostname without `https://`:
+
+```cpp
+const char *API_HOST = "studysmart-api.onrender.com";
+const uint16_t API_PORT = 443;
+```
+
+Use HTTPS on the device when calling Render.
+
 ## Health
 
 ```http
@@ -146,4 +186,3 @@ POST /api/verify
 ```
 
 These use `data/quizzes.json` and do not require Gemini.
-
